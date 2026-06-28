@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # MPLS router telemetry via Telegraf SNMP exporter
+  - job_name: 'mpls_routers'
+    static_configs:
+      - targets:
+          - 'telegraf:9273'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # FastAPI application metrics
+  - job_name: 'ps13_api'
+    static_configs:
+      - targets: ['api:8000']
+    metrics_path: '/metrics'
+
+  # Redis exporter
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Node exporter (host metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']

@@ -1,0 +1,113 @@
+version: '3.9'
+
+services:
+  # ── Frontend NOC Dashboard ─────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - ps13-net
+
+  # ── FastAPI Backend ────────────────────────────────────────────
+  api:
+    image: ps13-api:latest          # build from your backend repo
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MARIADB_URL=mysql+pymysql://ps13:ps13pass@mariadb/ps13
+      - PROMETHEUS_URL=http://prometheus:9090
+      - OLLAMA_URL=http://ollama:11434
+    depends_on:
+      - redis
+      - mariadb
+      - prometheus
+      - ollama
+    restart: unless-stopped
+    networks:
+      - ps13-net
+
+  # ── Prometheus time-series DB ─────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - ps13-net
+
+  # ── Redis cache / live feed ────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - ps13-net
+
+  # ── MariaDB relational DB ─────────────────────────────────────
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: ps13
+      MYSQL_USER: ps13
+      MYSQL_PASSWORD: ps13pass
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    networks:
+      - ps13-net
+
+  # ── Ollama local LLM (Phi-3) ──────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - ps13-net
+    # Pull model on first start:
+    # docker exec -it ps13-ollama ollama pull phi3
+
+  # ── Elasticsearch (logs) ──────────────────────────────────────
+  elasticsearch:
+    image: elasticsearch:8.13.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    networks:
+      - ps13-net
+
+volumes:
+  prometheus_data:
+  redis_data:
+  mariadb_data:
+  ollama_models:
+  elastic_data:
+
+networks:
+  ps13-net:
+    driver: bridge
+    internal: true   # No external access — air-gapped

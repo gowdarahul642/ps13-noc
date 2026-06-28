@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Vite
+vite.config.js.timestamp-*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# ML models (large binaries — store in LFS or secure transfer)
+backend/models/*.pkl
+backend/models/*.json
+backend/models/*.bin
+!backend/models/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker volumes (local dev)
+prometheus_data/
+redis_data/
+mariadb_data/
+elastic_data/
+ollama_models/
